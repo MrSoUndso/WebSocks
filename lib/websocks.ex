@@ -1,4 +1,5 @@
 defmodule Websocks do
+  use Bitwise 
   @moduledoc """
   Documentation for `Websocks`.
   """
@@ -45,15 +46,29 @@ defmodule Websocks do
       :ssl.close(socket)
     end
     response = parameters[:key]
-    |> compute_key |> compute_response
+    |> compute_key
+    |> compute_response
     :ssl.send(socket,response)
 
-    msg = receive do
+    data = receive do
       {:ssl,_socket,data} -> data
     end
+    |> list_to_bitstring
 
-    msg
+    <<fin::1, rsv::3, opcode::4, mask::1, rest::bitstring>> = data
 
+    if mask == 0 do
+      :ssl.close(socket)
+    end
+
+    {payload_length, rest} = get_payload_length(rest)
+    IO.puts(payload_length)
+    <<mask1,mask2,mask3,mask4,payload::binary>> = rest
+    IO.puts mask1
+    IO.puts mask2
+    IO.puts mask3
+    IO.puts mask4
+    payload
 
   end
 
@@ -71,6 +86,29 @@ defmodule Websocks do
   defp compute_response(computed_key) do
     "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " <> computed_key <> "\r\n\r\n"
   end
+
+  defp list_to_bitstring(list) do
+    Enum.reduce(list,<<>>,fn value, acc -> acc <> <<value>> end)
+  end
+
+  def get_payload_length(payload_rest) do
+    <<length::7,rest::bitstring>> = payload_rest
+    if length <= 125  do
+      {length,rest}
+    else
+      if length == 126 do
+        <<_length::7,extended_length::16,rest::bitstring>> = payload_rest
+        {extended_length, rest}
+      else
+         if length == 127 do
+           <<_length::7,extended_length::64,rest::bitstring>> = payload_rest
+           {extended_length, rest}
+        end
+      end
+    end
+  end
+
+
 
 
 
