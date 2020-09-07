@@ -1,32 +1,21 @@
 defmodule Websocks do
-  use Bitwise 
+  use Bitwise
   @moduledoc """
   Documentation for `Websocks`.
   """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Websocks.hello()
-      :world
-
-  """
-  def hello do
-    :world
-  end
 
   def accept() do
-
+    #setup socket
     :ssl.start
     {:ok, listenSocket} = :ssl.listen(9999, [certfile: ".certs/cert.pem", keyfile: ".certs/key.pem", reuseaddr: true, password: 'pass'])
     {:ok, tlsSocket} = :ssl.transport_accept(listenSocket)
     {:ok, socket} = :ssl.handshake(tlsSocket)
+    #recieve upgrade request
     request = receive do
         {:ssl, {:sslsocket, {:gen_tcp, _port, :tls_connection, _},_}, request} -> request
     end
-
+    #parse request
 
     parsed_request = String.split(to_string(request),"\r\n",[trim: true])
     |> Enum.filter(fn val ->
@@ -41,7 +30,7 @@ defmodule Websocks do
                   key: get_value_from_key(parsed_request,"Sec-WebSocket-Key"),
                   upgrade: get_value_from_key(parsed_request,"Upgrade")
                 ]
-
+    #upgrade to WebSocket
     if parameters[:upgrade] != "websocket" do
       :ssl.close(socket)
     end
@@ -50,24 +39,30 @@ defmodule Websocks do
     |> compute_response
     :ssl.send(socket,response)
 
+    #recieve first message and parse it
+
     data = receive do
       {:ssl,_socket,data} -> data
     end
     |> list_to_bitstring
 
-    <<fin::1, rsv::3, opcode::4, mask::1, rest::bitstring>> = data
 
-    if mask == 0 do
+    <<_fin::1, _rsv::3, _opcode::4, masked::1, rest::bitstring>> = data
+
+    if masked == 0 do
       :ssl.close(socket)
     end
 
     {payload_length, rest} = get_payload_length(rest)
-    IO.puts(payload_length)
-    <<mask1,mask2,mask3,mask4,payload::binary>> = rest
-    IO.puts mask1
-    IO.puts mask2
-    IO.puts mask3
-    IO.puts mask4
+
+    <<mask1,mask2,mask3,mask4,masked_payload::binary>> = rest
+    mask = [mask1,mask2,mask3,mask4]
+
+    payload = unmask_payload(mask,masked_payload)
+    #check if payload length is the same as actual length
+    if String.length(payload) != payload do
+      String.slice(payload,-payload_length,payload_length)
+    end
     payload
 
   end
@@ -91,7 +86,7 @@ defmodule Websocks do
     Enum.reduce(list,<<>>,fn value, acc -> acc <> <<value>> end)
   end
 
-  def get_payload_length(payload_rest) do
+  defp get_payload_length(payload_rest) do
     <<length::7,rest::bitstring>> = payload_rest
     if length <= 125  do
       {length,rest}
@@ -106,6 +101,22 @@ defmodule Websocks do
         end
       end
     end
+  end
+
+
+
+  def unmask_payload(mask,payload,acc \\ <<>>)
+  def unmask_payload(mask,<<payload_head,payload::binary>>,acc) do
+    unless payload == nil do
+      {mask_key,mask} = List.pop_at(mask,0)
+      acc = <<payload_head ^^^ mask_key>> <> acc
+      mask = List.insert_at(mask,4,mask_key)
+      unmask_payload(mask,payload,acc)
+    end
+  end
+
+  def unmask_payload(_mask,_payload,acc) do
+    String.reverse(acc)
   end
 
 
