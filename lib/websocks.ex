@@ -85,7 +85,7 @@ defmodule Websocks do
       String.slice(payload, -payload_length, payload_length)
     end
 
-    payload
+    socket
   end
 
   defp get_value_from_key(parsed_list, key) do
@@ -142,5 +142,17 @@ defmodule Websocks do
 
   defp unmask_payload(_mask, _payload, acc) do
     String.reverse(acc)
+  end
+
+
+  def send(socket,msg_content) do
+    msg_length = String.length(msg_content)
+    msg = cond do
+      msg_length <= 125 -> <<1::1,0::3, 1::4, 0::1, msg_length::7, msg_content::bitstring>>
+      msg_length <= 65536 -> <<1::1,0::3,1::4,0::1,126::7,msg_length::16, msg_content::bitstring>>
+      #works in theory, but not in practice
+      msg_length > 65536 -> <<1::1,0::3,1::4,0::1,127::7,msg_length::64, msg_content::bitstring>>
+    end
+    :ssl.send(socket,msg)
   end
 end
