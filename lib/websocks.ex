@@ -16,6 +16,7 @@ defmodule Websocks do
         reuseaddr: true,
         password: 'pass'
       )
+    #break into multiple processes here
 
     {:ok, tlsSocket} = :ssl.transport_accept(listenSocket)
     {:ok, socket} = :ssl.handshake(tlsSocket)

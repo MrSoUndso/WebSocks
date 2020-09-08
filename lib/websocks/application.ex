@@ -7,7 +7,8 @@ defmodule Websocks.Application do
 
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: Websocks.Worker.start_link(arg)
+      {Websocks.PoolSupervisor, []},
+      {Websocks.PoolHandler, %{}}
       # {Websocks.Worker, arg}
     ]
 
