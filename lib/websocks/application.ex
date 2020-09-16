@@ -8,7 +8,12 @@ defmodule Websocks.Application do
   def start(_type, _args) do
     children = [
       {Websocks.PoolSupervisor, []},
-      {Websocks.PoolHandler, %{}}
+      {Websocks.PoolHandler, %{}},
+      {DynamicSupervisor, strategy: :one_for_one, name: Websocks.SocketSupervisor},
+      %{
+        id: Websocks.Acceptor,
+        start: {Websocks.Acceptor, :start_link, [9999, {".certs/cert.pem", ".certs/key.pem", 'pass'}]}
+      }
       # {Websocks.Worker, arg}
     ]
 
