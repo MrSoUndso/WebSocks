@@ -4,25 +4,27 @@ defmodule PoolHandlerTest do
   doctest PoolHandler
 
   setup do
-    start_supervised!({PoolHandler, %{}})
     %{}
   end
 
   test "adding two pools and checking if they are there" do
     assert PoolHandler.add(:first) == :ok
     assert PoolHandler.add(:second) == :ok
-    assert PoolHandler.get_pools() == {:ok,%{:first => nil, :second => nil}}
+    {:ok,%{:first => pid1, :second => pid2}} = PoolHandler.get_pools()
+    assert is_pid(pid1)
+    assert is_pid(pid2)
   end
 
   test "adding one pool" do
-    assert PoolHandler.get(:name) == {:error,:not_found}
-    assert PoolHandler.add(:name) == :ok
-    assert PoolHandler.get(:name) == {:ok, nil}
+    assert PoolHandler.get(:add_test) == {:error,:not_found}
+    assert PoolHandler.add(:add_test) == :ok
+    {:ok, pid} = PoolHandler.get(:add_test)
+    assert is_pid(pid)
   end
 
   test "removing a pool" do
-    PoolHandler.add(:name)
-    assert PoolHandler.remove(:name) == :ok
-    assert PoolHandler.get(:name) == {:error,:not_found}
+    PoolHandler.add(:remove_test)
+    assert PoolHandler.remove(:remove_test) == :ok
+    assert PoolHandler.get(:remove_test) == {:error,:not_found}
   end
 end
