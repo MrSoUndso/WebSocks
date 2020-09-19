@@ -10,10 +10,10 @@ defmodule Websocks.Application do
       {Websocks.PoolSupervisor, []},
       {Websocks.PoolHandler, %{}},
       {DynamicSupervisor, strategy: :one_for_one, name: Websocks.SocketSupervisor},
-      %{
-        id: Websocks.Acceptor,
-        start: {Websocks.Acceptor, :start_link, [9999, {".certs/cert.pem", ".certs/key.pem", 'pass'}]}
-      }
+    #  %{
+    #    id: Websocks.Acceptor,
+    #    start: {Websocks.Acceptor, :start_link, [9999, {".certs/cert.pem", ".certs/key.pem", 'pass'}]}
+    #  }
       # {Websocks.Worker, arg}
     ]
 

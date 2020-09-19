@@ -154,8 +154,15 @@ defmodule Websocks.Socket do
       String.slice(payload, -payload_length, payload_length)
     end
     IO.inspect payload
+    poolpid = if length(state[:pool]) == nil do
+      {:ok, poolpid} = Websocks.PoolHandler.insert_into(payload, self())
+      poolpid
+    else
+      Websocks.Pool.msg(state[:pool],payload,self())
+      state[:pool]
+    end
     msgs = [payload] ++ state[:msgs]
-  {:noreply, [socket: socket, msgs: msgs]}
+  {:noreply, [socket: socket, msgs: msgs, pool: poolpid]}
   end
 
   @impl true

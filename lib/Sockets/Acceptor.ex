@@ -17,7 +17,6 @@ def loop(listenSocket) do
   {:ok,pid} = DynamicSupervisor.start_child(Websocks.SocketSupervisor,{Websocks.Socket,tlsSocket})
   :ssl.controlling_process(tlsSocket,pid)
   Socket.upgrade_connection(pid,tlsSocket)
-  Socket.send(pid,"Hello World! :)")
   loop(listenSocket)
 end
 

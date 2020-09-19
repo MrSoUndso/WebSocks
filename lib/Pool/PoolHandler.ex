@@ -1,5 +1,6 @@
 defmodule Websocks.PoolHandler do
   use GenServer
+  alias Websocks.Pool
 
   # Client
   def start_link(default) when is_map(default) do
@@ -24,6 +25,10 @@ defmodule Websocks.PoolHandler do
     GenServer.call(Websocks.PoolHandler, {:get,name})
   end
 
+  def insert_into(name, socket) do
+    GenServer.call(Websocks.PoolHandler, {:insert_into, name, socket})
+  end
+
   # Server (callbacks)
 
   @impl true
@@ -43,6 +48,21 @@ defmodule Websocks.PoolHandler do
     DynamicSupervisor.terminate_child(Websocks.PoolSupervisor,Map.get(state, name))
     state = Map.delete(state,name)
     {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:insert_into, name, socket}, _from, state) do
+    if Process.alive?(socket) do
+      poolpid = Map.get(state,name)
+      if poolpid == nil do
+        {:reply, :not_found, state}
+      end
+      Pool.add(poolpid, socket)
+      IO.puts "Inserted into pool: #{name}"
+      {:reply, {:ok,poolpid}, state}
+    else
+      {:reply, :dead, state}
+    end
   end
 
   @impl true
