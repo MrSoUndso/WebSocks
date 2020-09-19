@@ -187,4 +187,9 @@ defmodule Websocks.Socket do
     {:noreply,state}
   end
 
+  @impl true
+  def handle_info({:ssl_closed,_rest}, state) do
+    {:stop,:shutdown,state}
+  end
+
 end
