@@ -154,7 +154,7 @@ defmodule Websocks.Socket do
       String.slice(payload, -payload_length, payload_length)
     end
     IO.inspect payload
-    poolpid = if length(state[:pool]) == nil do
+    poolpid = if state[:pool] == nil do
       {:ok, poolpid} = Websocks.PoolHandler.insert_into(payload, self())
       poolpid
     else
@@ -163,6 +163,11 @@ defmodule Websocks.Socket do
     end
     msgs = [payload] ++ state[:msgs]
   {:noreply, [socket: socket, msgs: msgs, pool: poolpid]}
+  end
+
+  @impl true
+  def handle_info({:ssl_closed,_rest}, state) do
+    {:stop,:shutdown,state}
   end
 
   @impl true
@@ -187,9 +192,6 @@ defmodule Websocks.Socket do
     {:noreply,state}
   end
 
-  @impl true
-  def handle_info({:ssl_closed,_rest}, state) do
-    {:stop,:shutdown,state}
-  end
+
 
 end
